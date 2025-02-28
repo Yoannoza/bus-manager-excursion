@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { CheckCircle2, AlertCircle, UserPlus, UserMinus } from "lucide-react";
+import { CheckCircle2, AlertCircle, UserPlus, UserMinus, Ticket } from "lucide-react";
 import { 
   Card, 
   CardContent,
@@ -75,9 +75,10 @@ export function ParticipantCard({
                 <p className="font-medium text-lg">
                   {participant.firstName} {participant.lastName}
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  ID: {participant.ticketId}
-                </p>
+                <div className="flex items-center mt-1 text-sm text-muted-foreground">
+                  <Ticket className="h-3.5 w-3.5 mr-1.5" />
+                  {participant.ticketId}
+                </div>
               </div>
               <div className="flex items-start">
                 {isAvailable && (

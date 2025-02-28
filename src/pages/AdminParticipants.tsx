@@ -7,7 +7,7 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { ParticipantCard } from "@/components/ParticipantCard";
 import { motion } from "framer-motion";
-import { FilterX, FilterCheck, Filter, Bus, Search, RefreshCw } from "lucide-react";
+import { FilterX, FileCheck, Filter, Bus, Search, RefreshCw } from "lucide-react";
 import {
   Card,
   CardContent,
