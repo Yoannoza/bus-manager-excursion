@@ -21,22 +21,53 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demo purposes
+// Users for demo purposes
 const MOCK_USERS = [
   {
     id: "1",
-    name: "Admin User",
-    email: "admin@example.com",
+    name: "Admin 1",
+    email: "admin1@example.com",
     password: "admin123",
     role: "admin" as const,
   },
   {
     id: "2",
-    name: "Ahmed",
-    email: "controller@example.com",
+    name: "Admin 2",
+    email: "admin2@example.com",
+    password: "admin123",
+    role: "admin" as const,
+  },
+  {
+    id: "3",
+    name: "Controller 1",
+    email: "controller1@example.com",
+    password: "controller123",
+    role: "controller" as const,
+    busId: 1,
+  },
+  {
+    id: "4",
+    name: "Controller 2",
+    email: "controller2@example.com",
+    password: "controller123",
+    role: "controller" as const,
+    busId: 2,
+  },
+  {
+    id: "5",
+    name: "Controller 3",
+    email: "controller3@example.com",
     password: "controller123",
     role: "controller" as const,
     busId: 3,
+  },
+  {
+    id: "6",
+    name: "Controller 4",
+    email: "controller4@example.com",
+    password: "controller123",
+    role: "controller" as const,
+    busId: 4,
   },
 ];
 
