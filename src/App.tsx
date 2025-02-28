@@ -15,6 +15,10 @@ import Dashboard from "./pages/Dashboard";
 import BusManagement from "./pages/BusManagement";
 import SearchPage from "./pages/SearchPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminParticipants from "./pages/AdminParticipants";
+import AdminControllers from "./pages/AdminControllers";
+import AdminSettings from "./pages/AdminSettings";
+import AdminSync from "./pages/AdminSync";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +43,10 @@ const App = () => (
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/participants" element={<AdminParticipants />} />
+                <Route path="/admin/controllers" element={<AdminControllers />} />
+                <Route path="/admin/settings" element={<AdminSettings />} />
+                <Route path="/admin/sync" element={<AdminSync />} />
                 
                 {/* 404 Route */}
                 <Route path="*" element={<NotFound />} />
