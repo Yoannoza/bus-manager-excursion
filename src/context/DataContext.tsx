@@ -35,7 +35,7 @@ type DataContextType = {
   getParticipantById: (id: string) => Participant | undefined;
 };
 
-// Mock data for demonstration
+// Mock buses data
 const MOCK_BUSES: Bus[] = [
   { id: 1, name: "Bus 1", capacity: 50, participants: [] },
   { id: 2, name: "Bus 2", capacity: 50, participants: [] },
@@ -43,8 +43,103 @@ const MOCK_BUSES: Bus[] = [
   { id: 4, name: "Bus 4", capacity: 50, participants: [] },
 ];
 
-// Generate random participants
-const generateParticipants = (count: number): Participant[] => {
+// Google Sheets ID
+const SHEET_ID = "1YhAPWSm-94SGt3YwWPFF8NfP9EqIUvIn6O_oUVeLCIk";
+
+// Fetch participants from Google Sheets
+const fetchParticipantsFromSheets = async (): Promise<Participant[]> => {
+  try {
+    // Use the Google Sheets API to fetch data
+    // This URL fetches the sheet as CSV
+    const response = await fetch(
+      `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`
+    );
+    
+    if (!response.ok) {
+      throw new Error("Failed to fetch data from Google Sheets");
+    }
+    
+    const csvData = await response.text();
+    // Parse CSV data
+    const rows = csvData.split("\n");
+    
+    // Skip the header row (first row)
+    const participants: Participant[] = [];
+    
+    // Start from index 1 to skip header
+    for (let i = 1; i < rows.length; i++) {
+      // Parse the CSV row (handle commas in quoted strings)
+      const row = parseCSVRow(rows[i]);
+      
+      if (row.length >= 3) {
+        // Column mapping from Google Sheets
+        const ticketId = row[0]?.replace(/"/g, "") || `T${1000 + i}`;
+        const firstName = row[1]?.replace(/"/g, "") || "";
+        const lastName = row[2]?.replace(/"/g, "") || "";
+        const busIdStr = row[3]?.replace(/"/g, "") || "";
+        const assignedAt = row[4]?.replace(/"/g, "") || null;
+        const assignedBy = row[5]?.replace(/"/g, "") || null;
+        
+        // Parse busId as number or null
+        let busId: number | null = null;
+        if (busIdStr && !isNaN(parseInt(busIdStr))) {
+          busId = parseInt(busIdStr);
+        }
+        
+        participants.push({
+          id: `p${1000 + i}`,
+          firstName,
+          lastName,
+          ticketId,
+          busId,
+          assignedAt,
+          assignedBy
+        });
+      }
+    }
+    
+    return participants;
+  } catch (error) {
+    console.error("Error fetching data from Google Sheets:", error);
+    // Fallback to mock data on error
+    toast.error("Impossible de charger les données depuis Google Sheets. Utilisation des données de démonstration.");
+    return generateMockParticipants(200);
+  }
+};
+
+// Helper function to parse CSV rows properly (handling quoted values with commas)
+const parseCSVRow = (row: string): string[] => {
+  const result: string[] = [];
+  let inQuotes = false;
+  let currentValue = "";
+  
+  for (let i = 0; i < row.length; i++) {
+    const char = row[i];
+    
+    if (char === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+    
+    if (char === ',' && !inQuotes) {
+      result.push(currentValue);
+      currentValue = "";
+      continue;
+    }
+    
+    currentValue += char;
+  }
+  
+  // Don't forget to add the last value
+  if (currentValue) {
+    result.push(currentValue);
+  }
+  
+  return result;
+};
+
+// Generate mock participants (fallback if Google Sheets fails)
+const generateMockParticipants = (count: number): Participant[] => {
   const firstNames = ["Mohammed", "Fatima", "Ahmed", "Aisha", "Omar", "Mariam", "Ali", "Layla", "Hassan", "Zainab", "Youssef", "Nour", "Ibrahim", "Sara", "Karim"];
   const lastNames = ["Al-Farsi", "El-Masri", "Al-Rashid", "Bouazizi", "Khalil", "Bennani", "Al-Ahmed", "Hakimi", "Zidane", "Mansour", "Haddad", "Ibrahim", "Kaddour", "El-Amrani"];
 
@@ -72,19 +167,6 @@ const generateParticipants = (count: number): Participant[] => {
   });
 };
 
-// Create a list of participants
-const MOCK_PARTICIPANTS = generateParticipants(200);
-
-// Assign participants to buses
-MOCK_PARTICIPANTS.forEach(participant => {
-  if (participant.busId) {
-    const bus = MOCK_BUSES.find(b => b.id === participant.busId);
-    if (bus) {
-      bus.participants.push(participant);
-    }
-  }
-});
-
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
@@ -93,17 +175,38 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize with mock data
+  // Initialize with data from Google Sheets
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        setIsLoading(true);
+        setError(null);
         
-        setBuses([...MOCK_BUSES]);
-        setAllParticipants([...MOCK_PARTICIPANTS]);
+        // Fetch participants from Google Sheets
+        const participants = await fetchParticipantsFromSheets();
+        
+        // Initialize buses
+        const busesCopy = [...MOCK_BUSES].map(bus => ({
+          ...bus,
+          participants: []
+        }));
+        
+        // Assign participants to buses
+        participants.forEach(participant => {
+          if (participant.busId) {
+            const bus = busesCopy.find(b => b.id === participant.busId);
+            if (bus) {
+              bus.participants.push(participant);
+            }
+          }
+        });
+        
+        setBuses(busesCopy);
+        setAllParticipants(participants);
+        
+        toast.success("Données chargées avec succès depuis Google Sheets");
       } catch (err) {
-        setError("Failed to load data");
+        setError("Échec du chargement des données");
         console.error(err);
       } finally {
         setIsLoading(false);
@@ -113,20 +216,38 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     loadData();
   }, []);
 
-  // Refresh data from the source (simulated)
+  // Refresh data from Google Sheets
   const refreshData = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Fetch participants from Google Sheets
+      const participants = await fetchParticipantsFromSheets();
       
-      // In a real app, this would fetch from Google Sheets
-      toast.success("Data refreshed successfully");
+      // Initialize buses
+      const busesCopy = [...MOCK_BUSES].map(bus => ({
+        ...bus,
+        participants: []
+      }));
+      
+      // Assign participants to buses
+      participants.forEach(participant => {
+        if (participant.busId) {
+          const bus = busesCopy.find(b => b.id === participant.busId);
+          if (bus) {
+            bus.participants.push(participant);
+          }
+        }
+      });
+      
+      setBuses(busesCopy);
+      setAllParticipants(participants);
+      
+      toast.success("Données actualisées avec succès");
     } catch (err) {
-      setError("Failed to refresh data");
-      toast.error("Failed to refresh data");
+      setError("Échec de l'actualisation des données");
+      toast.error("Échec de l'actualisation des données");
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -138,9 +259,6 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
       // Update participant's bus assignment
       setAllParticipants(prev => 
         prev.map(p => {
@@ -184,9 +302,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         return newBuses;
       });
       
-      toast.success("Participant assigned successfully");
+      toast.success("Participant assigné avec succès");
+      
+      // In a real app, this would update the Google Sheet via API
+      console.log("API call would update Google Sheets with new bus assignment");
     } catch (err) {
-      toast.error("Failed to assign participant");
+      toast.error("Échec de l'assignation du participant");
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -198,9 +319,6 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
       // Update participant's bus assignment
       setAllParticipants(prev => 
         prev.map(p => {
@@ -229,9 +347,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         return newBuses;
       });
       
-      toast.success("Participant removed from bus");
+      toast.success("Participant retiré du bus");
+      
+      // In a real app, this would update the Google Sheet via API
+      console.log("API call would update Google Sheets to remove bus assignment");
     } catch (err) {
-      toast.error("Failed to remove participant");
+      toast.error("Échec du retrait du participant");
       console.error(err);
     } finally {
       setIsLoading(false);
